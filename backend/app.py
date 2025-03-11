@@ -46,7 +46,7 @@ def predict_soil_and_crop(n, p, k, ph, temp, humidity, rainfall):
     input_data = np.array([[n, p, k, temp, humidity, ph, rainfall]])
 
     # Predict the best crop
-    predicted_crop = model.predict(input_data).tolist()[0]  # Convert ndarray to list
+    predicted_crop = model.predict(input_data).tolist()[0]  # Convert ndarray to a single value
 
     # Determine soil health
     soil_health = classify_soil_health(n, p, k, ph)
@@ -129,10 +129,10 @@ def get_insights():
             soil_data['rainfall']
         ]
         # Predict using the CatBoost model
-        prediction = model.predict([input_data]).tolist()[0]  # Convert ndarray to list
+        prediction = model.predict([input_data]).tolist()[0]  # Convert ndarray to a single value
         # Generate recommendations
         insights = {
-            "predicted_yield": prediction,
+            "predicted_yield": prediction,  # Single value, not an array
             "recommendation": "Add organic compost to improve nitrogen levels."
         }
         return jsonify(insights)
