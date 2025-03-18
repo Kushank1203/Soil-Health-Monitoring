@@ -29,7 +29,7 @@ except Exception as e:
     conn = None
 
 # Function to classify soil health
-def classify_soil_health(n, p, k, ph):
+def classify_soil_health(ph, n, p, k):
     if ph < 5.5 or ph > 8 or n < 20 or p < 20 or k < 20:
         return "Poor"
     elif 5.5 <= ph <= 7.5 and n >= 20 and p >= 20 and k >= 20:
@@ -38,18 +38,18 @@ def classify_soil_health(n, p, k, ph):
         return "Moderate"
 
 # Function to predict soil health and recommend a crop
-def predict_soil_and_crop(n, p, k, ph, temp, humidity, rainfall):
+def predict_soil_and_crop(ph, humidity, temp, n, p, k, rainfall):
     if model is None:
         raise Exception("CatBoost model is not loaded.")
 
     # Prepare input data for prediction
-    input_data = np.array([[n, p, k, temp, humidity, ph, rainfall]])
+    input_data = np.array([[ph, humidity, temp, n, p, k, rainfall]])
 
     # Predict the best crop
     predicted_crop = model.predict(input_data).tolist()[0]  # Convert ndarray to a single value
 
     # Determine soil health
-    soil_health = classify_soil_health(n, p, k, ph)
+    soil_health = classify_soil_health(ph, n, p, k)
 
     return {
         "Soil Health": soil_health,
@@ -85,22 +85,22 @@ def predict():
         data = request.get_json()
 
         # Validate input parameters
-        required_params = ["n", "p", "k", "ph", "temp", "humidity", "rainfall"]
+        required_params = ["ph", "humidity", "temperature", "nitrogen", "phosphorus", "potassium", "rainfall"]
         for param in required_params:
             if param not in data:
                 return jsonify({"error": f"Missing parameter: {param}"}), 400
 
         # Extract values
-        n = float(data["n"])
-        p = float(data["p"])
-        k = float(data["k"])
+        n = float(data["nitrogen"])
+        p = float(data["phosphorus"])
+        k = float(data["potassium"])
         ph = float(data["ph"])
-        temp = float(data["temp"])
+        temp = float(data["temperature"])
         humidity = float(data["humidity"])
         rainfall = float(data["rainfall"])
 
         # Get prediction
-        result = predict_soil_and_crop(n, p, k, ph, temp, humidity, rainfall)
+        result = predict_soil_and_crop(ph, humidity, temp, n, p, k, rainfall)
 
         return jsonify(result)
 
@@ -123,6 +123,31 @@ def get_insights():
             if param not in soil_data:
                 print(f"Missing parameter: {param}")
                 return jsonify({"error": f"Missing parameter: {param}"}), 400
+
+        # Insert data into the database
+        if conn is not None:
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    "INSERT INTO soil_data (ph, humidity, temperature, nitrogen, phosphorus, potassium, rainfall) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        soil_data['ph'],
+                        soil_data['humidity'],
+                        soil_data['temperature'],
+                        soil_data['nitrogen'],
+                        soil_data['phosphorus'],
+                        soil_data['potassium'],
+                        soil_data['rainfall']
+                    )
+                )
+                conn.commit()  # Commit the transaction
+                print("Data inserted into the database.")
+            except Exception as e:
+                conn.rollback()  # Roll back the transaction on error
+                print(f"Error inserting data into the database: {e}")
+                return jsonify({"error": str(e)}), 500
+            finally:
+                cur.close()  # Always close the cursor
 
         # Prepare input for the model
         input_data = [
