@@ -1,57 +1,90 @@
 [
-    {
-      "id": "1",
-      "type": "inject",
-      "z": "main",
-      "name": "Simulate Soil Data",
-      "props": [],
-      "repeat": "10",
-      "crontab": "",
-      "once": true,
-      "topic": "",
-      "x": 150,
-      "y": 100,
-      "wires": [["2"]]
+  {
+    "id": "1",
+    "type": "inject",
+    "z": "main",
+    "name": "Simulate Soil Data",
+    "props": [],
+    "repeat": "10",
+    "crontab": "",
+    "once": true,
+    "topic": "",
+    "x": 150,
+    "y": 100,
+    "wires": [["2"]]
+  },
+  {
+    "id": "2",
+    "type": "function",
+    "z": "main",
+    "name": "Generate Random Data",
+    "func": "msg.payload = {\n    ph: Math.random() * 14,\n    humidity: Math.random() * 100,\n    temperature: Math.random() * 50,\n    nitrogen: Math.random() * 100,\n    phosphorus: Math.random() * 100,\n    potassium: Math.random() * 100,\n    rainfall: Math.random() * 200\n};\nreturn msg;",
+    "outputs": 1,
+    "x": 350,
+    "y": 100,
+    "wires": [["3", "4"]]
+  },
+  {
+    "id": "3",
+    "type": "http request",
+    "z": "main",
+    "name": "Send to Flask",
+    "method": "POST",
+    "ret": "obj",
+    "url": "http://localhost:5001/api/insights",
+    "headers": {
+      "Content-Type": "application/json"
     },
-    {
-      "id": "2",
-      "type": "function",
-      "z": "main",
-      "name": "Generate Random Data",
-      "func": "msg.payload = {\n    ph: Math.random() * 14,\n    humidity: Math.random() * 100,\n    temperature: Math.random() * 50,\n    nitrogen: Math.random() * 100,\n    phosphorus: Math.random() * 100,\n    potassium: Math.random() * 100,\n    rainfall: Math.random() * 200\n};\nreturn msg;",
-      "outputs": 1,
-      "x": 350,
-      "y": 100,
-      "wires": [["3"]]
+    "x": 550,
+    "y": 100,
+    "wires": [["5"]]
+  },
+  {
+    "id": "4",
+    "type": "postgrestor",
+    "z": "main",
+    "name": "Insert into Database",
+    "config": {
+      "host": "localhost",
+      "port": "5432",
+      "db": "soil_health",
+      "user": "postgres",
+      "password": "dumbo@2711vk"
     },
-    {
-      "id": "3",
-      "type": "http request",
-      "z": "main",
-      "name": "Send to Flask",
-      "method": "POST",
-      "ret": "obj",
-      "url": "http://localhost:5001/api/insights",
-      "headers": {
-        "Content-Type": "application/json"
-      },
-      "x": 550,
-      "y": 100,
-      "wires": [["4"]]
-    },
-    {
-      "id": "4",
-      "type": "debug",
-      "z": "main",
-      "name": "Debug Response",
-      "active": true,
-      "tosidebar": true,
-      "console": false,
-      "tostatus": false,
-      "complete": "payload",
-      "targetType": "msg",
-      "x": 750,
-      "y": 100,
-      "wires": []
-    }
-  ]
+    "query": "INSERT INTO soil_data (ph, humidity, temperature, nitrogen, phosphorus, potassium, rainfall) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    "params": "payload.ph,payload.humidity,payload.temperature,payload.nitrogen,payload.phosphorus,payload.potassium,payload.rainfall",
+    "x": 550,
+    "y": 200,
+    "wires": [["6"]]
+  },
+  {
+    "id": "5",
+    "type": "debug",
+    "z": "main",
+    "name": "Debug Response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 750,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "6",
+    "type": "debug",
+    "z": "main",
+    "name": "Debug Database Insert",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 750,
+    "y": 200,
+    "wires": []
+  }
+]
