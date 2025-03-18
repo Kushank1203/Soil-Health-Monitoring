@@ -5,7 +5,7 @@ import joblib
 import numpy as np
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://localhost:3000"])
 
 # Load the pre-trained CatBoost model
 try:
@@ -64,6 +64,7 @@ def home():
 def get_data():
     """Fetch the latest soil data from the database."""
     if conn is None:
+        print("Database connection failed")  # Log database connection error
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
@@ -71,8 +72,10 @@ def get_data():
         cur.execute("SELECT * FROM soil_data ORDER BY timestamp DESC LIMIT 10")
         data = cur.fetchall()
         cur.close()
+        print("Fetched data:", data)  # Log fetched data
         return jsonify(data)
     except Exception as e:
+        print(f"Error in /api/data: {e}")  # Log the error
         return jsonify({"error": str(e)}), 500
 
 @app.route("/predict", methods=["POST"])
@@ -107,15 +110,18 @@ def predict():
 @app.route('/api/insights', methods=['POST'])
 def get_insights():
     """Generate AI-based insights using the CatBoost model."""
-    if model is None:
-        return jsonify({"error": "CatBoost model is not loaded"}), 500
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 415  # Unsupported Media Type
 
     try:
-        soil_data = request.json
+        soil_data = request.get_json()  # Parse JSON data
+        print("Received data:", soil_data)
+
         # Validate input parameters
         required_params = ["ph", "humidity", "temperature", "nitrogen", "phosphorus", "potassium", "rainfall"]
         for param in required_params:
             if param not in soil_data:
+                print(f"Missing parameter: {param}")
                 return jsonify({"error": f"Missing parameter: {param}"}), 400
 
         # Prepare input for the model
@@ -128,15 +134,20 @@ def get_insights():
             soil_data['potassium'],
             soil_data['rainfall']
         ]
+        print("Input data for prediction:", input_data)
+
         # Predict using the CatBoost model
         prediction = model.predict([input_data]).tolist()[0]  # Convert ndarray to a single value
+        print("Prediction:", prediction)
+
         # Generate recommendations
         insights = {
-            "predicted_yield": prediction,  # Single value, not an array
+            "predicted_yield": prediction,
             "recommendation": "Add organic compost to improve nitrogen levels."
         }
         return jsonify(insights)
     except Exception as e:
+        print(f"Error in /api/insights: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

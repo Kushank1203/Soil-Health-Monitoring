@@ -4,20 +4,43 @@ import axios from 'axios';
 const Insights = ({ soilData }) => {
   const [insights, setInsights] = useState(null);
   const [cropPrediction, setCropPrediction] = useState(null);
+  const [error, setError] = useState(null);
 
   const fetchInsights = async () => {
     try {
       const latestData = soilData[0]; // Use the latest soil data
+      console.log("Sending data to /api/insights:", latestData);
 
-      // Fetch insights
-      const insightsResponse = await axios.post('http://localhost:5001/api/insights', latestData);
+      // Fetch insights with correct headers and JSON payload
+      const insightsResponse = await axios.post(
+        'http://localhost:5001/api/insights',
+        JSON.stringify(latestData), // Convert to JSON string
+        {
+          headers: {
+            'Content-Type': 'application/json', // Add this header
+          },
+        }
+      );
+      console.log("Response from /api/insights:", insightsResponse.data);
       setInsights(insightsResponse.data);
 
-      // Fetch crop prediction
-      const cropResponse = await axios.post('http://localhost:5001/predict', latestData);
+      // Fetch crop prediction with correct headers and JSON payload
+      const cropResponse = await axios.post(
+        'http://localhost:5001/predict',
+        JSON.stringify(latestData), // Convert to JSON string
+        {
+          headers: {
+            'Content-Type': 'application/json', // Add this header
+          },
+        }
+      );
+      console.log("Response from /predict:", cropResponse.data);
       setCropPrediction(cropResponse.data);
+
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error("Error fetching insights:", error);
+      setError("Failed to fetch insights. Please try again.");
     }
   };
 
@@ -25,6 +48,7 @@ const Insights = ({ soilData }) => {
     <div>
       <h2>AI-Based Insights</h2>
       <button onClick={fetchInsights}>Get Insights</button>
+      {error && <p style={{ color: "red" }}>{error}</p>}
       {insights && (
         <div>
           <h3>Soil Insights</h3>
