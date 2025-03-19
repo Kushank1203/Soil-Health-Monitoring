@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Insights from './components/Insights';
+import Dashboard from './components/Dashboard';
 import './App.css';
 
 const App = () => {
@@ -17,6 +18,7 @@ const App = () => {
     <div className="App">
       <h1>Soil Health Monitoring</h1>
       <Insights soilData={soilData} />
+      <Dashboard soilData = {soilData} />
     </div>
   );
 };
